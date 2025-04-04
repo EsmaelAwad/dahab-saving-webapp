@@ -99,6 +99,7 @@ def login_user(
     user = get_user_by_username(username)
     if not user:
         return RedirectResponse(url=f"/register?username={username}", status_code=302)
+
     if user.password != password:
         return templates.TemplateResponse("login.html", {
             "request": request,
@@ -107,25 +108,40 @@ def login_user(
                 f"<a href='/reset-password?username={username}'>reset your password</a>."
             )
         })
-    if not is_authorized(username):
-        return templates.TemplateResponse("login.html", {
-            "request": request,
-            "message": (
-                "You’re registered but not authorized to access the app yet. "
-                "Please contact the admin to get access: "
-                f"<a href='{ADMIN_GITHUB}' target='_blank'>{ADMIN_NAME} on GitHub</a>"
-                " Or you can send an email to this address: "
-                f"<a href='mailto:{ADMIN_EMAIL}'>{ADMIN_EMAIL}</a>"
-            )
-        })
 
+    # 🔐 Set cookie regardless of authorization
     response = RedirectResponse(url="/dashboard", status_code=302)
-    response.set_cookie("username", username,
-                         httponly=True,
-    secure=True,         # 🔐 Required for HTTPS
-    samesite="Lax"       # 👈 Optional but recommended
+    response.set_cookie(
+        "username", username,
+        httponly=True,
+        secure=True,
+        samesite="Lax"
     )
+
+    # ❌ Not authorized: redirect to dashboard with message
+    if not is_authorized(username):
+        response = RedirectResponse(url="/unauthorized", status_code=302)
+        response.set_cookie(
+            "username", username,
+            httponly=True,
+            secure=True,
+            samesite="Lax"
+        )
+        return response
+
     return response
+
+@app.get("/unauthorized", response_class=HTMLResponse)
+def unauthorized_page(request: Request):
+    current_user = get_logged_in_user(request)
+    return templates.TemplateResponse("unauthorized.html", {
+        "request": request,
+        "current_user": current_user,
+        "admin_name": ADMIN_NAME,
+        "admin_github": ADMIN_GITHUB,
+        "admin_email": ADMIN_EMAIL,
+    })
+
 
 @app.post("/register", response_class=HTMLResponse)
 def register_user(
