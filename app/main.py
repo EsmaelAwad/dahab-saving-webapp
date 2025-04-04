@@ -9,14 +9,21 @@ from app.models import User, AuthorizedUser, Deposit
 from sqlmodel import Session, select
 from app.database import create_db_and_tables
 from app.crud import deauthorize_user, get_user_by_username, create_user, is_authorized, get_all_users, authorize_user, save_deposit, get_paid_week_dates
-from dotenv import load_dotenv
-import os 
+
 from app.crud import update_user_password
 from typing import Optional , List 
 from app.utils import get_all_saving_weeks, read_env_file, compute_streaks
 from datetime import datetime, date 
 
-load_dotenv('.env') # Load environment variables from .env file
+import os
+from dotenv import load_dotenv
+
+# Try loading from .env in project root (for local dev)
+load_dotenv()
+
+# If running on Render, this will override with real secrets
+load_dotenv("/etc/secrets/.env", override=True)
+
 ADMIN_NAME = os.getenv('ADMIN_NAME')
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 ADMIN_GITHUB = os.getenv("ADMIN_GITHUB")
@@ -24,7 +31,7 @@ TARGET_SAVING_AMOUNT = read_env_file('global.env').get('TARGET_SAVING_AMOUNT', 4
 START_DATE = datetime.strptime(read_env_file('global.env').get('START_DATE', '2025-04-07'), '%Y-%m-%d').date()
 END_DATE = datetime.strptime(read_env_file('global.env').get('END_DATE', '2026-12-31'), '%Y-%m-%d').date()
 DEADLINE = datetime.strptime(read_env_file('global.env').get('EXPECTED_DEADLINE_FOR_TRAVEL', '2025-10-18'), '%Y-%m-%d').date()
-print(START_DATE, END_DATE)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ✅ Run this at startup
