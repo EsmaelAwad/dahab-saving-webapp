@@ -1,0 +1,86 @@
+<!-- app/templates/leaderboard_chart.html -->
+<canvas id="leaderboardChart" height="400"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+
+<script>
+  Chart.register(ChartDataLabels);
+
+  const usernames = {{ usernames | tojson }};
+  const savedAmounts = {{ saved_amounts | tojson }};
+  const goal = {{ goal }};
+
+  const remainingAmounts = savedAmounts.map(amount => Math.max(goal - amount, 0));
+  const percentAchieved = savedAmounts.map(amount => ((amount / goal) * 100).toFixed(1));
+
+  const ctx = document.getElementById('leaderboardChart').getContext('2d');
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: usernames,
+      datasets: [
+        {
+          label: 'Saved',
+          data: savedAmounts,
+          backgroundColor: '#00aa88',
+          stack: 'Stack 0',
+          datalabels: {
+            align: 'center',
+            anchor: 'center',
+            color: 'white',
+            formatter: (value, context) => {
+              const i = context.dataIndex;
+              return `${percentAchieved[i]}%`;
+            }
+          }
+        },
+        {
+          label: 'Remaining',
+          data: remainingAmounts,
+          backgroundColor: '#eeeeee',
+          stack: 'Stack 0',
+          datalabels: {
+            align: 'end',
+            anchor: 'end',
+            color: '#444',
+            formatter: (value, context) => {
+              const i = context.dataIndex;
+              return `${(100 - percentAchieved[i]).toFixed(1)}%`;
+            }
+          }
+        }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            afterLabel: (context) => {
+              if (context.dataset.label === 'Saved') {
+                const i = context.dataIndex;
+                return `(${percentAchieved[i]}% of goal)`;
+              }
+            }
+          }
+        },
+        datalabels: { display: true }
+      },
+      scales: {
+        x: {
+          stacked: true,
+          max: goal,
+          title: {
+            display: true,
+            text: 'Amount (EGP)'
+          }
+        },
+        y: { stacked: true }
+      }
+    }
+  });
+</script>

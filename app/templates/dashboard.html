@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dahab Savings Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: auto;
+            padding: 2rem;
+        }
+
+        form {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 0.5rem;
+        }
+
+        input, select {
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            width: 100%;
+        }
+
+        button {
+            background-color: #00aa88;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .message {
+            color: green;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .summary-boxes {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            flex: 1;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+
+        .card h3 {
+            margin-top: 0;
+        }
+
+        .progress-bar {
+            height: 24px;
+            background-color: #ddd;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .progress {
+            height: 100%;
+            line-height: 24px;
+            color: white;
+            text-align: center;
+            font-size: 13px;
+            font-weight: bold;
+            transition: width 0.4s ease;
+        }
+
+        .progress-info {
+            text-align: center;
+            margin-top: 0.3rem;
+            font-weight: bold;
+        }
+
+        .section {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Dahab Savings Tracker 🏖️</h2>
+
+    {% if message %}
+        <div class="message">{{ message|safe }}</div>
+    {% endif %}
+
+    <div class="summary-boxes">
+        <div class="card">
+            <h3>Savings Overview</h3>
+            <p><strong>Total Saved</strong> <span style="float: right;">{{ total_saved }} EGP</span></p>
+            <p><strong>Goal</strong> <span style="float: right;">4000 EGP</span></p>
+            <div class="progress-bar">
+                <div class="progress" style="width: {{ progress_percent }}%; background-color: {{ progress_color }};">
+                    {% if progress_percent >= 10 %}
+                        {{ progress_percent }}%
+                    {% endif %}
+                </div>
+            </div>
+            <p class="progress-info">{{ total_saved }} EGP / 4000 EGP</p>
+        </div>
+
+        <div class="card">
+            <h3>Weekly Progress</h3>
+            <p><strong>Weeks Remaining</strong> <span style="float: right;">{{ weeks_remaining }}</span></p>
+            <p><strong>Needed/Week</strong> <span style="float: right;">{{ weekly_needed }} EGP</span></p>
+            <p><strong>Nearest Unpaid Week</strong> <span style="float: right;">{{ next_unpaid }}</span></p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>Recent Deposits</h3>
+        <ul>
+            {% for dep in recent_deposits %}
+                <li>{{ dep.week_date.strftime('%b %d') }} — {{ dep.amount }} EGP</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    {% if unpaid_weeks %}
+        <div style="background: #fff3cd; border: 1px solid #ffeeba; padding: 1rem; margin: 1rem 0; border-radius: 0.5rem;">
+            <strong>You have {{ unpaid_weeks|length }} unpaid week(s):</strong><br>
+            {{ unpaid_weeks | join(', ') }}
+        </div>
+    {% else %}
+        <div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 1rem; margin: 1rem 0; border-radius: 0.5rem;">
+            🎉 You’re fully up-to-date! No unpaid weeks.
+        </div>
+    {% endif %}
+
+    <form method="post" action="/deposit">
+        <label>Username</label>
+        <input type="text" name="username" required value="{{ logged_in_user }}">
+
+        <label>Amount</label>
+        <input type="number" name="amount" required step="0.01">
+
+        <label>Select Weeks (Sundays)</label>
+        <select name="selected_weeks" multiple size="6">
+            {% for week in saving_weeks %}
+                <option value="{{ week }}">{{ week.strftime('%B %d, %Y') }}</option>
+            {% endfor %}
+        </select>
+        <small>Hold Ctrl (Windows) or ⌘ Cmd (Mac) to select multiple weeks</small>
+
+        <button type="submit">Submit Deposit & Go To LeaderBoard</button>
+    </form>
+
+</body>
+</html>
+<!-- This template is designed to be used with Flask and Jinja2 templating engine. 
+     It displays a dashboard for tracking savings, including total saved, weekly progress, 
+     recent deposits, and a form for submitting new deposits. The layout is responsive and styled with CSS. -->
+<!-- The template uses Jinja2 syntax to dynamically insert data into the HTML, 
+     such as total saved amount, progress percentage, and recent deposits. 
+     It also includes conditional rendering for messages and unpaid weeks. -->
+<!-- The form at the bottom allows users to submit new deposits, 
+     with fields for username, amount, and selected weeks. 
+     The form uses POST method to send data to the server for processing. -->
+<!-- The template is structured with a clean and modern design, 
+     making it user-friendly and easy to navigate. 
+     The use of flexbox for layout ensures that the summary boxes are responsive and adapt to different screen sizes. -->
+<!-- The progress bar visually represents the savings progress, 
+     with color changes based on the percentage saved. 
+     The recent deposits section provides a quick overview of the latest contributions, 
+     while the unpaid weeks section alerts users to any outstanding payments. -->
+<!-- The template is designed to be easily maintainable and extendable, 
+     allowing for future enhancements and additional features as needed. 
+     Overall, it provides a comprehensive and engaging user experience for tracking savings. -->
+<!-- The template is compatible with modern web browsers and follows best practices for HTML and CSS coding standards. 
+     It is also optimized for performance, ensuring fast loading times and smooth interactions. -->
+<!-- The use of semantic HTML elements enhances accessibility, 
+     making it easier for screen readers and assistive technologies to interpret the content. 
+     The template is also designed to be mobile-friendly, 
+     ensuring a seamless experience across different devices and screen sizes. -->

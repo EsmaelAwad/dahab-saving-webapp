@@ -1,0 +1,42 @@
+<h3>🔥 Weekly Streak Comparison</h3>
+<canvas id="streakChart" height="300"></canvas>
+
+<!-- Chart.js already loaded from leaderboard_chart.html, no need to reload -->
+
+<script>
+  const streakLabels = {{ streak_usernames | tojson }};
+  const streakData = {{ streak_scores | tojson }};
+
+  const streakCtx = document.getElementById('streakChart').getContext('2d');
+  new Chart(streakCtx, {
+    type: 'bar',
+    data: {
+      labels: streakLabels,
+      datasets: [{
+        label: 'Weekly Streaks',
+        data: streakData,
+        backgroundColor: '#ff7043'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.raw} consecutive weeks`
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: 'Consecutive Weeks'
+          }
+        }
+      }
+    }
+  });
+</script>

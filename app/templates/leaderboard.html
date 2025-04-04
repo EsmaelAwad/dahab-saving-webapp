@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Savings Leaderboard</title>
+  <!-- Chart.js libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@1.2.0/dist/chartjs-chart-matrix.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      max-width: 1100px;
+      margin: auto;
+    }
+
+    h2 {
+      margin-bottom: 2rem;
+    }
+
+    .two-column-layout {
+      display: flex;
+      gap: 2rem;
+      align-items: stretch;
+    }
+
+    .left-column, .right-column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      max-height: 800px;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    .chart-container {
+      padding: 1rem;
+      border: 1px solid #f0f0f0;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    canvas {
+      width: 100% !important;
+      height: auto !important;
+      display: block;
+    }
+
+    .milestone-ring-container {
+      display: flex;
+      gap: 2rem;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .ring {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: 10px solid #eee;
+      position: relative;
+    }
+    .ring.complete-25 { border-color: #cd7f32; } /* Bronze */
+    .ring.complete-50 { border-color: silver; }
+    .ring.complete-75 { border-color: gold; }
+    .ring.complete-100 { border-color: limegreen; }
+    .ring-label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .ring-text {
+      text-align: center;
+      margin-top: 0.5rem;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>🏆 Leaderboard</h2>
+
+  <div class="two-column-layout">
+    <!-- LEFT COLUMN -->
+    <div class="left-column">
+      <div class="chart-container">
+        {% include "leaderboard_chart.html" %}
+      </div>
+      <div class="chart-container">
+        <h3>🎯 Milestone Rings</h3>
+        <div class="milestone-ring-container">
+          {% set percent = (saved_amounts[0] / goal * 100) | round(1) %}
+          <div>
+            <div class="ring {% if percent >= 25 %}complete-25{% endif %}">
+              <div class="ring-label">25%</div>
+            </div>
+            <div class="ring-text">🥉 Bronze</div>
+          </div>
+          <div>
+            <div class="ring {% if percent >= 50 %}complete-50{% endif %}">
+              <div class="ring-label">50%</div>
+            </div>
+            <div class="ring-text">🥈 Silver</div>
+          </div>
+          <div>
+            <div class="ring {% if percent >= 75 %}complete-75{% endif %}">
+              <div class="ring-label">75%</div>
+            </div>
+            <div class="ring-text">🥇 Gold</div>
+          </div>
+          <div>
+            <div class="ring {% if percent >= 100 %}complete-100{% endif %}">
+              <div class="ring-label">100%</div>
+            </div>
+            <div class="ring-text">🏆 Goal</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="right-column">
+      <div class="chart-container">
+        {% include "calendar_heatmap.html" %}
+      </div>
+      <div class="chart-container">
+        {% include "streak_chart.html" %}
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
