@@ -1,5 +1,7 @@
 <!-- app/templates/leaderboard_chart.html -->
-<canvas id="leaderboardChart" height="400"></canvas>
+<div id="leaderboard-container" style="max-height: 500px; overflow-y: auto;">
+  <canvas id="leaderboardChart"></canvas>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
@@ -14,7 +16,13 @@
   const remainingAmounts = savedAmounts.map(amount => Math.max(goal - amount, 0));
   const percentAchieved = savedAmounts.map(amount => ((amount / goal) * 100).toFixed(1));
 
-  const ctx = document.getElementById('leaderboardChart').getContext('2d');
+  const chartCanvas = document.getElementById('leaderboardChart');
+  const ctx = chartCanvas.getContext('2d');
+
+  // Dynamically set canvas height based on number of users
+  const perUserHeight = 50;
+  const chartHeight = usernames.length * perUserHeight;
+  chartCanvas.height = chartHeight;
 
   new Chart(ctx, {
     type: 'bar',
@@ -54,8 +62,9 @@
       ]
     },
     options: {
-      indexAxis: 'y',
       responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
       plugins: {
         legend: { position: 'bottom' },
         tooltip: {
@@ -79,7 +88,12 @@
             text: 'Amount (EGP)'
           }
         },
-        y: { stacked: true }
+        y: {
+          stacked: true,
+          ticks: {
+            autoSkip: false
+          }
+        }
       }
     }
   });

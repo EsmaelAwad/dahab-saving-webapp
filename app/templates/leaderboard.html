@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8"/>
   <title>Savings Leaderboard</title>
-  <!-- Chart.js libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@1.2.0/dist/chartjs-chart-matrix.min.js"></script>
@@ -23,7 +22,7 @@
     .two-column-layout {
       display: flex;
       gap: 2rem;
-      align-items: stretch;
+      align-items: flex-start;
     }
 
     .left-column, .right-column {
@@ -31,9 +30,6 @@
       display: flex;
       flex-direction: column;
       gap: 2rem;
-      max-height: 800px;
-      overflow-y: auto;
-      padding-right: 8px;
     }
 
     .chart-container {
@@ -43,9 +39,20 @@
       background: #fff;
     }
 
+    .scrollable-leaderboard {
+      margin-top: 1rem;
+      height: 600px;
+      overflow-y: auto;
+      overflow-x: auto;
+    }
+
+    #leaderboard-canvas {
+      height: calc(100px * {{ usernames | length }}) !important;
+      min-width: 100% !important;
+    }
+
     canvas {
       width: 100% !important;
-      height: auto !important;
       display: block;
     }
 
@@ -56,29 +63,40 @@
       align-items: center;
       flex-wrap: wrap;
     }
+
+    .milestone-container {
+      flex-shrink: 0;
+      margin-top: -15.5rem;
+      padding-bottom: 1rem;
+      align-self: flex-start;
+    }
+
     .ring {
-      width: 100px;
-      height: 100px;
+      width: 90px;
+      height: 90px;
       border-radius: 50%;
-      border: 10px solid #eee;
+      border: 8px solid #eee;
       position: relative;
     }
-    .ring.complete-25 { border-color: #cd7f32; } /* Bronze */
+
+    .ring.complete-25 { border-color: #cd7f32; }
     .ring.complete-50 { border-color: silver; }
     .ring.complete-75 { border-color: gold; }
     .ring.complete-100 { border-color: limegreen; }
+
     .ring-label {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
       font-weight: bold;
-      font-size: 14px;
+      font-size: 13px;
     }
+
     .ring-text {
       text-align: center;
-      margin-top: 0.5rem;
-      font-size: 14px;
+      margin-top: 0.3rem;
+      font-size: 13px;
     }
   </style>
 </head>
@@ -89,10 +107,13 @@
   <div class="two-column-layout">
     <!-- LEFT COLUMN -->
     <div class="left-column">
-      <div class="chart-container">
+      <!-- Leaderboard Chart -->
+      <div class="chart-container scrollable-leaderboard">
         {% include "leaderboard_chart.html" %}
       </div>
-      <div class="chart-container">
+
+      <!-- Milestone Rings -->
+      <div class="chart-container milestone-container">
         <h3>🎯 Milestone Rings</h3>
         <div class="milestone-ring-container">
           {% set percent = (saved_amounts[0] / goal * 100) | round(1) %}
@@ -122,6 +143,14 @@
           </div>
         </div>
       </div>
+
+      <!-- CSV Export Button -->
+      <div class="chart-container">
+        <h3>📤 Export Your Deposits</h3>
+        <button onclick="downloadCSV()" style="padding: 0.5rem 1rem; font-weight: bold; background: #00aa88; color: white; border: none; border-radius: 5px; cursor: pointer;">
+          Download CSV
+        </button>
+      </div>
     </div>
 
     <!-- RIGHT COLUMN -->
@@ -134,6 +163,34 @@
       </div>
     </div>
   </div>
+
+  <!-- CSV Export Script -->
+  <script>
+    const deposits = {{ user_deposits | tojson }};
+
+    function downloadCSV() {
+      if (deposits.length === 0) {
+        alert("No deposits to export.");
+        return;
+      }
+
+      const rows = [
+        ["Week Date", "Amount (EGP)"],
+        ...deposits.map(d => [d.date, d.amount])
+      ];
+
+      let csvContent = rows.map(e => e.join(",")).join("\n");
+      let blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      let url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "my_deposits.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  </script>
 
 </body>
 </html>

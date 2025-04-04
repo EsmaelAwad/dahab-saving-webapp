@@ -31,10 +31,23 @@ TARGET_SAVING_AMOUNT = read_env_file('global.env').get('TARGET_SAVING_AMOUNT', 4
 START_DATE = datetime.strptime(read_env_file('global.env').get('START_DATE', '2025-04-07'), '%Y-%m-%d').date()
 END_DATE = datetime.strptime(read_env_file('global.env').get('END_DATE', '2026-12-31'), '%Y-%m-%d').date()
 DEADLINE = datetime.strptime(read_env_file('global.env').get('EXPECTED_DEADLINE_FOR_TRAVEL', '2025-10-18'), '%Y-%m-%d').date()
+# Determine if running on Render
+IS_RENDER = os.getenv("RENDER") == "true"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # ✅ Run this at startup
+    """
+    Lifespan context for FastAPI application.
+
+    This function runs once when the application starts and performs any required
+    startup tasks such as initializing the database and creating tables.
+
+    Args:
+        app (FastAPI): The FastAPI app instance.
+
+    Yields:
+        None: Yields control back to FastAPI after performing setup.
+    """
     create_db_and_tables()
     yield
 
@@ -52,6 +65,18 @@ def get_logged_in_user(request: Request) -> Optional[str]:
 
 @app.get("/", response_class=HTMLResponse)
 def login_page(request: Request):
+    """
+    Renders the login page.
+
+    Retrieves any temporary message from the user's cookies (e.g., after registration),
+    then renders the login form. Clears the message after loading.
+
+    Args:
+        request (Request): The incoming HTTP request.
+
+    Returns:
+        HTMLResponse: The login form HTML page.
+    """
     message = request.cookies.get("message")
     response = templates.TemplateResponse("login.html", {
         "request": request,
@@ -62,6 +87,18 @@ def login_page(request: Request):
 
 @app.get("/admin-access", response_class=HTMLResponse)
 def admin_panel(request: Request):
+    """
+    Displays the admin panel if the current user is the configured admin.
+
+    Checks whether the logged-in user matches the admin credentials from the environment.
+    If valid, returns a list of users and authorized users.
+
+    Args:
+        request (Request): The incoming HTTP request.
+
+    Returns:
+        HTMLResponse: Admin panel page or 403 Access Denied if unauthorized.
+    """
     current_user = get_logged_in_user(request)
     if current_user is None or current_user.lower() != os.getenv("ADMIN_PANEL_NAME", "").lower():
         return HTMLResponse("Access denied", status_code=403)
@@ -78,6 +115,18 @@ def admin_panel(request: Request):
 # Adding the register page route
 @app.get("/register", response_class=HTMLResponse)
 def register_page(request: Request, username: str = ""):
+    """
+    Renders the user registration form.
+
+    Optionally pre-fills the username field based on a query parameter.
+
+    Args:
+        request (Request): The incoming HTTP request.
+        username (str, optional): Username to pre-fill in the form.
+
+    Returns:
+        HTMLResponse: The registration page.
+    """
     return templates.TemplateResponse("register.html", {
         "request": request,
         "username": username
@@ -85,6 +134,18 @@ def register_page(request: Request, username: str = ""):
 # Adding resetting password functionality and rendering page.
 @app.get("/reset-password", response_class=HTMLResponse)
 def reset_password_page(request: Request, username: str = ""):
+    """
+    Renders the password reset form for a user.
+
+    Optionally pre-fills the username field.
+
+    Args:
+        request (Request): The incoming HTTP request.
+        username (str, optional): Username to pre-fill in the form.
+
+    Returns:
+        HTMLResponse: The reset password page.
+    """
     return templates.TemplateResponse("reset_password.html", {
         "request": request,
         "username": username
@@ -96,6 +157,22 @@ def login_user(
     username: str = Form(...),
     password: str = Form(...)
 ):
+    """
+    Handles user login authentication.
+
+    Validates the submitted username and password. If the credentials are correct,
+    a secure cookie is set for the session. If the user is not authorized, they're
+    redirected to the unauthorized access page.
+
+    Args:
+        request (Request): The incoming HTTP request.
+        username (str): The username submitted via the login form.
+        password (str): The password submitted via the login form.
+
+    Returns:
+        HTMLResponse or RedirectResponse: Redirects to the dashboard or unauthorized page, 
+        or shows login form again on error.
+    """
     user = get_user_by_username(username)
     if not user:
         return RedirectResponse(url=f"/register?username={username}", status_code=302)
@@ -109,22 +186,22 @@ def login_user(
             )
         })
 
-    # 🔐 Set cookie regardless of authorization
+    #Set cookie regardless of authorization
     response = RedirectResponse(url="/dashboard", status_code=302)
     response.set_cookie(
         "username", username,
         httponly=True,
-        secure=True,
+        secure=IS_RENDER,
         samesite="Lax"
     )
 
-    # ❌ Not authorized: redirect to dashboard with message
+    #Not authorized: redirect to dashboard with message
     if not is_authorized(username):
         response = RedirectResponse(url="/unauthorized", status_code=302)
         response.set_cookie(
             "username", username,
             httponly=True,
-            secure=True,
+            secure=IS_RENDER,
             samesite="Lax"
         )
         return response
@@ -133,6 +210,17 @@ def login_user(
 
 @app.get("/unauthorized", response_class=HTMLResponse)
 def unauthorized_page(request: Request):
+    """
+    Displays an unauthorized access message for non-authorized users.
+
+    Shows contact information to request access from the admin.
+
+    Args:
+        request (Request): The incoming HTTP request.
+
+    Returns:
+        HTMLResponse: The unauthorized access template.
+    """
     current_user = get_logged_in_user(request)
     return templates.TemplateResponse("unauthorized.html", {
         "request": request,
@@ -149,6 +237,20 @@ def register_user(
     username: str = Form(...),
     password: str = Form(...)
 ):
+    """
+    Registers a new user account.
+
+    Checks if the username is already taken. If not, creates the user and redirects
+    to the login page with a success message.
+
+    Args:
+        request (Request): The incoming HTTP request.
+        username (str): The username submitted via the form.
+        password (str): The password submitted via the form.
+
+    Returns:
+        HTMLResponse or RedirectResponse: Registration form with validation or login page.
+    """
     existing = get_user_by_username(username)
     if existing:
         return templates.TemplateResponse("register.html", {
@@ -163,7 +265,7 @@ def register_user(
     response = RedirectResponse(url="/", status_code=302)
     response.set_cookie("message", "Account created! You can log in now.",
                          httponly=True,
-                        secure=True,         # 🔐 Required for HTTPS
+                        secure=IS_RENDER,         # 🔐 Required for HTTPS
                         samesite="Lax"       # 👈 Optional but recommended
                         )
     return response
@@ -175,6 +277,23 @@ def reset_password(
     new_password: str = Form(...),
     confirm_password: str = Form(...)
 ):
+    """
+    Handles user password reset.
+
+    Validates new and confirmation passwords, checks if the user exists, 
+    and updates the password if all validations pass.
+
+    Args:
+        request (Request): The incoming HTTP request.
+        username (str): The username of the account.
+        new_password (str): The new password.
+        confirm_password (str): Confirmation of the new password.
+
+    Returns:
+        HTMLResponse or RedirectResponse: Re-renders the reset form on error, 
+        or redirects to login page with a success message.
+    """
+
     if new_password != confirm_password:
         return templates.TemplateResponse("reset_password.html", {
             "request": request,
@@ -193,13 +312,27 @@ def reset_password(
     response = RedirectResponse(url="/", status_code=302)
     response.set_cookie("message", "Password reset! You can now log in.",
                          httponly=True,
-                            secure=True,         # 🔐 Required for HTTPS
+                            secure=IS_RENDER,         # 🔐 Required for HTTPS
                             samesite="Lax"       # 👈 Optional but recommended
                         )
     return response
 
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request):
+    """
+    Displays the main dashboard for logged-in users.
+
+    Shows total savings, progress towards the goal, weekly recommendations, 
+    and recent deposit activity. Redirects to login if the user is not authenticated.
+
+    Args:
+        request (Request): The incoming HTTP request.
+
+    Returns:
+        HTMLResponse or RedirectResponse: Renders the dashboard template or 
+        redirects to login page if unauthenticated.
+    """
+
     username = request.cookies.get("username")
     if not username:
         return RedirectResponse(url="/", status_code=302)
@@ -263,6 +396,22 @@ def submit_deposit(
     amount: float = Form(...),
     selected_weeks: List[str] = Form([])  # Dates as strings like '2025-04-07'
 ):
+    """
+    Handles deposit submission and allocation logic.
+
+    Distributes deposit amounts across selected weeks, or auto-assigns to 
+    first unpaid week. Stores deposits and sets summary message in cookies.
+
+    Args:
+        request (Request): The incoming HTTP request.
+        username (str): The username making the deposit.
+        amount (float): The total deposit amount.
+        selected_weeks (List[str]): List of ISO week dates to allocate deposit.
+
+    Returns:
+        RedirectResponse: Redirects to the leaderboard with deposit summary message.
+    """
+
     all_weeks = get_all_saving_weeks()
     paid_weeks = get_paid_week_dates(username)
     today = datetime.now().date()
@@ -308,13 +457,27 @@ def submit_deposit(
     response = response = RedirectResponse(url="/leaderboard", status_code=302)
     response.set_cookie("message", full_message,
                          httponly=True,
-                        secure=True,         # 🔐 Required for HTTPS
+                        secure=IS_RENDER,         # 🔐 Required for HTTPS
                         samesite="Lax"       # 👈 Optional but recommended
                     )
     return response
 
 @app.post("/authorize/{username}", response_class=HTMLResponse)
 def do_authorize_user(username: str, request: Request):
+    """
+    Authorizes a user via the admin panel.
+
+    Checks if the requester is the admin and adds the target username 
+    to the authorized users list.
+
+    Args:
+        username (str): Username to authorize.
+        request (Request): The incoming HTTP request.
+
+    Returns:
+        RedirectResponse or HTMLResponse: Redirects to admin panel or denies access.
+    """
+
     # Again, hardcoded for now
     current_user = get_logged_in_user(request)
     if current_user.lower() != os.getenv("ADMIN_PANEL_NAME", "").lower():
@@ -325,6 +488,20 @@ def do_authorize_user(username: str, request: Request):
 
 @app.post("/deauthorize/{username}", response_class=HTMLResponse)
 def do_deauthorize_user(username: str, request: Request):
+    """
+    Removes authorization from a user via the admin panel.
+
+    Checks if the requester is the admin and removes the target username 
+    from the authorized users list.
+
+    Args:
+        username (str): Username to deauthorize.
+        request (Request): The incoming HTTP request.
+
+    Returns:
+        RedirectResponse or HTMLResponse: Redirects to admin panel or denies access.
+    """
+
     current_user = get_logged_in_user(request)
     if current_user is None or current_user.lower() != os.getenv("ADMIN_PANEL_NAME", "").lower():
         return HTMLResponse("Access denied", status_code=403)
@@ -334,6 +511,19 @@ def do_deauthorize_user(username: str, request: Request):
 
 @app.get('/leaderboard', response_class=HTMLResponse)
 def leaderboard(request: Request):
+    """
+    Displays the savings leaderboard with streaks and heatmap data.
+
+    Aggregates deposits for all users, builds heatmap and streak visualizations 
+    for the logged-in user, and renders the leaderboard.
+
+    Args:
+        request (Request): The incoming HTTP request.
+
+    Returns:
+        HTMLResponse: The rendered leaderboard page.
+    """
+
     with Session(engine) as session:
         # Fetch all deposit data
         deposits = session.exec(select(Deposit)).all()
