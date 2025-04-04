@@ -120,7 +120,11 @@ def login_user(
         })
 
     response = RedirectResponse(url="/dashboard", status_code=302)
-    response.set_cookie("username", username)
+    response.set_cookie("username", username,
+                         httponly=True,
+    secure=True,         # 🔐 Required for HTTPS
+    samesite="Lax"       # 👈 Optional but recommended
+    )
     return response
 
 @app.post("/register", response_class=HTMLResponse)
@@ -141,7 +145,11 @@ def register_user(
 
     # Redirect to login page with success message
     response = RedirectResponse(url="/", status_code=302)
-    response.set_cookie("message", "Account created! You can log in now.")
+    response.set_cookie("message", "Account created! You can log in now.",
+                         httponly=True,
+                        secure=True,         # 🔐 Required for HTTPS
+                        samesite="Lax"       # 👈 Optional but recommended
+                        )
     return response
 
 @app.post("/reset-password", response_class=HTMLResponse)
@@ -167,7 +175,11 @@ def reset_password(
 
     update_user_password(username, new_password)
     response = RedirectResponse(url="/", status_code=302)
-    response.set_cookie("message", "Password reset! You can now log in.")
+    response.set_cookie("message", "Password reset! You can now log in.",
+                         httponly=True,
+                            secure=True,         # 🔐 Required for HTTPS
+                            samesite="Lax"       # 👈 Optional but recommended
+                        )
     return response
 
 @app.get("/dashboard", response_class=HTMLResponse)
@@ -278,7 +290,11 @@ def submit_deposit(
     full_message = f"{deposit_summary}<br><br>{unpaid_status}"
 
     response = response = RedirectResponse(url="/leaderboard", status_code=302)
-    response.set_cookie("message", full_message)
+    response.set_cookie("message", full_message,
+                         httponly=True,
+                        secure=True,         # 🔐 Required for HTTPS
+                        samesite="Lax"       # 👈 Optional but recommended
+                    )
     return response
 
 @app.post("/authorize/{username}", response_class=HTMLResponse)
